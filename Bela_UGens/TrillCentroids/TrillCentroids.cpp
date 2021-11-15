@@ -11,7 +11,6 @@ http://doc.sccode.org/Reference/ServerPluginAPI.html
 #include <Bela.h>
 #include <libraries/Trill/Trill.h>
 #include "SC_PlugIn.h"
-#include <pthread.h>
 
 #define NUM_TOUCH 5 // maximum number of touch centroids
 
@@ -76,13 +75,13 @@ void updateTrill(void* data)
   // 1. First update any settings that have been flagged for updating...
   if(unit->updateNeeded) {
     if(unit->updateNoiseThreshold && (unit->sensor->setNoiseThreshold(unit->noiseThreshold) != 0)) {
-  		fprintf(stderr, "ERROR: Unable to set noise threshold on Trill Sensor!\n");
+  		rt_fprintf(stderr, "ERROR: Unable to set noise threshold on Trill Sensor!\n");
   	}
     if(unit->updatePrescalerOpt && (unit->sensor->setPrescaler(unit->prescaler) != 0)) {
-  		fprintf(stderr, "ERROR: Unable to set prescaler on Trill Sensor!\n");
+  		rt_fprintf(stderr, "ERROR: Unable to set prescaler on Trill Sensor!\n");
   	}
     if(unit->updateBaseline && (unit->sensor->updateBaseline() != 0)) {
-  		fprintf(stderr, "ERROR: Unable to update baseline on Trill Sensor!\n");
+  		rt_fprintf(stderr, "ERROR: Unable to update baseline on Trill Sensor!\n");
   	}
     unit->updateNoiseThreshold = false;
     unit->updatePrescalerOpt = false;
@@ -126,34 +125,33 @@ void TrillCentroids_Ctor(TrillCentroids* unit) {
     OUT0((j*2)+2) = 0.f;  // size i
   }
 
-  unit->readInterval = 5; // (MAGIC NUMBER) sensor update/launch I2C aux task every 5ms
+  unit->readInterval = 5; // (MAGIC NUtMBER) sensor update/launch I2C aux task every 5ms
   unit->readIntervalSamples = 0; // launch I2C aux task every X samples
   unit->readCount = 0;
   unit->debugPrintRate = 4; // 4 times per second
 
-  printf("TrillCentroids CTOR id: %p\n", pthread_self());
 
   // initialize / setup the Trill sensor
   if(unit->sensor->setup(unit->i2c_bus, Trill::UNKNOWN, unit->i2c_address) != 0) {
-    fprintf(stderr, "ERROR: Unable to initialize touch sensor\n");
+    rt_fprintf(stderr, "ERROR: Unable to initialize touch sensor\n");
     return;
   } else {
     unit->sensor->setMode(unit->mode);
     unit->sensor->setNoiseThreshold(unit->noiseThreshold);
     unit->sensor->setPrescaler(unit->prescaler);
-    printf("Trill sensor found: devtype %d, firmware_v %d\n", unit->sensor->deviceType(), unit->sensor->firmwareVersion());
-    printf("Also found %d active Trill UGens\n", numTrillUGens);
-    printf("Initialized with #outputs: %d  i2c_bus: %d  i2c_addr: %d  mode: %s  thresh: %.4f  pre: %d  devtype: %d\n", unit->mNumOutputs, unit->i2c_bus, unit->i2c_address, Trill::getNameFromMode(unit->mode).c_str(), unit->noiseThreshold, unit->prescaler, unit->sensor->deviceType());
+    rt_printf("Trill sensor found: devtype %d, firmware_v %d\n", unit->sensor->deviceType(), unit->sensor->firmwareVersion());
+    rt_printf("Also found %d active Trill UGens\n", numTrillUGens);
+    rt_printf("Initialized with #outputs: %d  i2c_bus: %d  i2c_addr: %d  mode: %s  thresh: %.4f  pre: %d  devtype: %d\n", unit->mNumOutputs, unit->i2c_bus, unit->i2c_address, Trill::getNameFromMode(unit->mode).c_str(), unit->noiseThreshold, unit->prescaler, unit->sensor->deviceType());
   }
 
 
   if(!unit->sensor->is1D()) {
-    fprintf(stderr, "WARNING! You are using a sensor of device type %s that is not a linear (1-dimensional) Trill sensor. The UGen may not function properly.\n", Trill::getNameFromDevice(unit->sensor->deviceType()));
+    rt_fprintf(stderr, "WARNING! You are using a sensor of device type %s that is not a linear (1-dimensional) Trill sensor. The UGen may not function properly.\n", Trill::getNameFromDevice(unit->sensor->deviceType()));
   }
 
   numTrillUGens++;
   if(numTrillUGens != 1) {
-    fprintf(stderr, "WARNING! Found %d active Trill UGens when there should be a maximum of 1! The UGen may not function properly.\n", numTrillUGens);
+    rt_fprintf(stderr, "WARNING! Found %d active Trill UGens when there should be a maximum of 1! The UGen may not function properly.\n", numTrillUGens);
   }
 
   unit->i2cTask = Bela_createAuxiliaryTask(updateTrill, 50, "I2C-read", (void*)unit);
@@ -168,7 +166,6 @@ void TrillCentroids_Ctor(TrillCentroids* unit) {
 void TrillCentroids_Dtor(TrillCentroids* unit)
 {
   numTrillUGens--;
-  printf("TrillCentroids DTOR id: %p // there are still %d active Trill UGens\n", pthread_self(), numTrillUGens);
   delete unit->sensor; // make sure to use delete here and remove your allocations
 }
 
