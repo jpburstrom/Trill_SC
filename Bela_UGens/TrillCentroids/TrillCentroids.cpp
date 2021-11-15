@@ -107,8 +107,12 @@ void updateTrill(void* data)
 
 void TrillCentroids_Ctor(TrillCentroids* unit) {
   // horrible hack to initialise everything to zero.
-  memset(&(unit->sensor), 0, sizeof(TrillCentroids) - sizeof(Unit));
-  unit->sensor = new Trill();   // all objects must be allocated in the constructor
+  void *mem = RTAlloc(unit->mWorld, sizeof(Trill));
+  if (mem) {
+    unit->sensor = new (mem) Trill();
+  } else {
+    unit->sensor = nullptr;
+  }
 
   // Get initial arguments to UGen for I2C setup
   unit->i2c_bus = (int)IN0(0);
@@ -166,7 +170,7 @@ void TrillCentroids_Ctor(TrillCentroids* unit) {
 void TrillCentroids_Dtor(TrillCentroids* unit)
 {
   numTrillUGens--;
-  delete unit->sensor; // make sure to use delete here and remove your allocations
+  RTFree(unit->mWorld, unit->sensor);
 }
 
 /*
