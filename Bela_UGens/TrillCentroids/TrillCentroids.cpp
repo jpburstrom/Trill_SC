@@ -106,7 +106,6 @@ void updateTrill(void* data)
 }
 
 void TrillCentroids_Ctor(TrillCentroids* unit) {
-  // horrible hack to initialise everything to zero.
   void *mem = RTAlloc(unit->mWorld, sizeof(Trill));
   if (mem) {
     unit->sensor = new (mem) Trill();
